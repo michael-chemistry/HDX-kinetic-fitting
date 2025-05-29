@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -54,7 +53,6 @@ with st.sidebar:
     initial_k1 = st.number_input("Initial guess for k₁ (recommended: ~0.01)", value=0.01, format="%.5f")
     initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005, or ~½ of k₁)", value=0.005, format="%.5f")
     max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
-    min_d1 = st.slider("Minimum D₁ Value", 0.0, 0.1, 0.05, 0.01)
 
     st.subheader("Download Example File")
     example_data = pd.DataFrame({
@@ -77,6 +75,8 @@ if uploaded_file:
         d0 = df['d0'].values
         d1 = df['d1'].values
         d2 = df['d2'].values
+
+        min_d1 = 1.0 - max_deut  # Enforce conservation: D1 cannot drop below remainder when D2 is at maximum
 
         result = fit_kinetic_data(time, d0, d1, d2,
                                    initial_k1=initial_k1,
