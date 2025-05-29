@@ -97,7 +97,7 @@ if uploaded_file:
                 'D1 Observed': d1,
                 'D2 Observed': d2,
                 'D0 Fit': result['d0_fit'],
-                'D1 Fit': result['d1_fit'],
+                'D1 Fit': np.where(time == 0, 1.0 - result['d2_fit'][0], result['d1_fit']),
                 'D2 Fit': result['d2_fit']
             })
             st.dataframe(fitted_df, use_container_width=True)
