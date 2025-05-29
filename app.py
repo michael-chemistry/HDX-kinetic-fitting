@@ -76,7 +76,7 @@ if uploaded_file:
         d1 = df['d1'].values
         d2 = df['d2'].values
 
-        min_d1 = 1.0 - max_deut
+        min_d1 = 1.0 - max_deut  # Enforce conservation: D1 cannot drop below remainder when D2 is at maximum
 
         result = fit_kinetic_data(time, d0, d1, d2,
                                    initial_k1=initial_k1,
@@ -91,17 +91,18 @@ if uploaded_file:
             st.metric("R²", f"{result['r_squared']:.5f}")
 
             st.subheader("Observed vs Fitted Values")
-            d0_fit_corrected = 1.0 - result['d1_fit'] - result['d2_fit']
+            d0_fit = 1.0 - result['d1_fit'] - result['d2_fit']
             fitted_df = pd.DataFrame({
                 'time': time,
                 'D0 Observed': d0,
                 'D1 Observed': d1,
                 'D2 Observed': d2,
-                'D0 Fit': d0_fit_corrected,
+                'D0 Fit': d0_fit,
                 'D1 Fit': result['d1_fit'],
                 'D2 Fit': result['d2_fit']
             })
             st.dataframe(fitted_df, use_container_width=True)
+
             st.line_chart(fitted_df.set_index('time'))
         else:
             st.error(result['message'])
