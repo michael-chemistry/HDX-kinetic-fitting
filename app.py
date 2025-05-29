@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,7 +9,7 @@ from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_mode
 st.set_page_config(page_title="Sequential Kinetic Fit", layout="centered")
 st.title("Sequential First-Order Kinetic Fitting Tool")
 
-st.markdown("""
+st.markdown(r"""
 This tool fits experimental HDX data to a sequential first-order kinetic model:
 
 - D₀ → D₁ → D₂
@@ -33,8 +34,7 @@ This model was chosen because it captures the kinetic progression between unmodi
 The optimization is performed using the `curve_fit` function from SciPy with the Trust Region Reflective (TRF) algorithm.
 This method was selected because it supports bound-constrained nonlinear least squares optimization, which is important for enforcing the physically meaningful constraint that rate constants must be non-negative. It also performs robustly for problems with moderate residuals and correlated parameters like $k_1$ and $k_2$.
 
----
-""")
+---""")
 
 with st.expander("📜 Click to show/hide the source code"):
     with open("app.py", "r") as f:
@@ -47,8 +47,7 @@ st.markdown("""
 3. Optionally adjust the initial guesses and fitting constraints.
 4. View optimized parameters ($k_1$, $k_2$, $R^2$) and fitted curves.
 
----
-""")
+---""")
 
 with st.sidebar:
     st.header("Fitting Parameters")
