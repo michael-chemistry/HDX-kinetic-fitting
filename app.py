@@ -1,128 +1,94 @@
-import streamlit as st
-import pandas as pd
+
 import numpy as np
-import base64
-import io
-from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_model
-
-st.set_page_config(page_title="Sequential Kinetic Fit", layout="centered")
-st.title("Sequential First-Order Kinetic Fitting Tool")
-
-st.markdown(r"""
-This tool fits experimental HDX data to a sequential first-order kinetic model:
-
-- D₀ → D₁ → D₂
-
-The model assumes two consecutive irreversible first-order reactions, with rates $k_1$ and $k_2$.
-The analytical solutions for the fractions of D₀, D₁, and D₂ at time $t$ are:
-
-$$
-D_1(t) = D_\text{max} \cdot \frac{k_1}{k_2 - k_1} (e^{-k_1 t} - e^{-k_2 t})
-$$
-
-$$
-D_2(t) = D_\text{max} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1}\right]
-$$
-
-$$
-D_0(t) = 1 - D_1(t) - D_2(t)
-$$
-
-This model was chosen because it captures the kinetic progression between unmodified, singly modified, and doubly modified species without requiring assumptions of reversibility, which aligns with the irreversible nature of deuterium exchange in many experimental systems.
-
-The optimization is performed using the `curve_fit` function from SciPy with the Trust Region Reflective (TRF) algorithm.
-This method was selected because it supports bound-constrained nonlinear least squares optimization, which is important for enforcing the physically meaningful constraint that rate constants must be non-negative. It also performs robustly for problems with moderate residuals and correlated parameters like $k_1$ and $k_2$.
-
-""")
-
-with st.expander("🧠 Click to view how k₁ and k₂ are calculated (code transparency)"):
-    st.markdown(r"""
-The rate constants $k_1$ and $k_2$ are estimated by fitting your data to the model using SciPy's `curve_fit` function, which solves a nonlinear least-squares optimization problem using the Trust Region Reflective (TRF) algorithm.
-
-```python
 from scipy.optimize import curve_fit
 
-def combined_model(t_dummy, k1, k2):
-    d0, d1, d2 = sequential_first_order_model(time_data, k1, k2, max_deut)
-    return np.concatenate([d0, d1, d2])
 
-popt, pcov = curve_fit(
-    combined_model, t_dummy, y_obs,
-    p0=[initial_k1, initial_k2],
-    bounds=([0, 0], [np.inf, np.inf]),
-    method='trf', maxfev=10000, ftol=1e-10, xtol=1e-10
-)
+# === Sequential First-Order Model ===
+def sequential_first_order_model(t, k1, k2, max_deut=0.95):
+    """
+    Calculates the fractions of D0, D1, and D2 for a sequential first-order reaction:
+    D0 → D1 → D2.
 
-k1, k2 = popt
-```
-""")
+    Equations:
+        D1(t) = max_deut * (k1 / (k2 - k1)) * (exp(-k1 * t) - exp(-k2 * t))
+        D2(t) = max_deut * [1 - ((k2 * exp(-k1 * t) - k1 * exp(-k2 * t)) / (k2 - k1))]
+        D0(t) = 1 - D1(t) - D2(t)
 
-st.markdown("""
-### Step-by-Step Instructions
-1. Download the example CSV to understand the required format.
-2. Upload your experimental data file (Excel format).
-3. Optionally adjust the initial guesses and fitting constraints.
-4. View optimized parameters ($k_1$, $k_2$, $R^2$) and fitted curves.
+    Parameters:
+        t : array_like - Time points
+        k1 : float - Rate constant for D0 → D1
+        k2 : float - Rate constant for D1 → D2
+        max_deut : float - Maximum deuterium incorporation (default: 0.95)
 
----""")
+    Returns:
+        Tuple of arrays: (D0, D1, D2)
+    """
+    # Ensure k1 != k2 to avoid division by zero
+    if abs(k2 - k1) < 1e-10:
+        k2 += 1e-10
 
-with st.sidebar:
-    st.header("Fitting Parameters")
-    initial_k1 = st.number_input("Initial guess for k₁ (recommended: ~0.01)", value=0.01, format="%.5f")
-    initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005, or ~½ of k₁)", value=0.005, format="%.5f")
-    max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
+    d1 = max_deut * (k1 / (k2 - k1)) * (np.exp(-k1 * t) - np.exp(-k2 * t))
+    d2 = max_deut * (1 - ((k2 * np.exp(-k1 * t) - k1 * np.exp(-k2 * t)) / (k2 - k1)))
+    d0 = 1.0 - d1 - d2
+    return d0, d1, d2
 
-    st.subheader("Download Example File")
-    example_data = pd.DataFrame({
-        'time': np.linspace(0, 200, 10),
-        'd0': np.linspace(1, 0.1, 10),
-        'd1': np.linspace(0, 0.5, 10),
-        'd2': np.linspace(0, 0.4, 10)
-    })
-    csv = example_data.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="example_kinetics.csv">Download CSV</a>'
-    st.markdown(href, unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Upload your kinetic data (Excel)", type=["xlsx"])
+# === Kinetic Fit Function ===
+def fit_kinetic_data(time_data, d0_data, d1_data, d2_data,
+                     initial_k1=0.01, initial_k2=0.005, max_deut=0.95, min_d1=0.0):
+    """
+    Fits HDX data to the sequential first-order model using SciPy's curve_fit.
+    Uses Trust Region Reflective (TRF) optimization for constrained nonlinear least squares fitting.
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
-    if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
-        time = df['time'].values
-        d0 = df['d0'].values
-        d1 = df['d1'].values
-        d2 = df['d2'].values
+    Parameters:
+        time_data, d0_data, d1_data, d2_data : array_like - Experimental data arrays
+        initial_k1, initial_k2 : float - Initial rate constant guesses
+        max_deut : float - Maximum deuterium incorporation (default 0.95)
+        min_d1 : float - Not used in fitting, present for compatibility
 
-        min_d1 = 1.0 - max_deut
+    Returns:
+        Dictionary of optimized parameters and model statistics
+    """
+    initial_params = [initial_k1, initial_k2]
+    bounds = ([0, 0], [np.inf, np.inf])
 
-        result = fit_kinetic_data(time, d0, d1, d2,
-                                   initial_k1=initial_k1,
-                                   initial_k2=initial_k2,
-                                   max_deut=max_deut,
-                                   min_d1=min_d1)
+    def combined_model(t_dummy, k1, k2):
+        d0, d1, d2 = sequential_first_order_model(time_data, k1, k2, max_deut)
+        return np.concatenate([d0, d1, d2])
 
-        if result['success']:
-            st.success("Model fit successfully!")
-            st.metric("k₁", f"{result['k1']:.5f} ± {result['k1_error']:.5f}")
-            st.metric("k₂", f"{result['k2']:.5f} ± {result['k2_error']:.5f}")
-            st.metric("R²", f"{result['r_squared']:.5f}")
+    y_obs = np.concatenate([d0_data, d1_data, d2_data])
+    t_dummy = np.linspace(0, 1, len(y_obs))
 
-            st.subheader("Observed vs Fitted Values")
-            d0_fit = 1.0 - result['d1_fit'] - result['d2_fit']
-            fitted_df = pd.DataFrame({
-                'time': time,
-                'D0 Observed': d0,
-                'D1 Observed': d1,
-                'D2 Observed': d2,
-                'D0 Fit': d0_fit,
-                'D1 Fit': result['d1_fit'],
-                'D2 Fit': result['d2_fit']
-            })
-            st.dataframe(fitted_df, use_container_width=True)
+    try:
+        popt, pcov = curve_fit(
+            combined_model, t_dummy, y_obs,
+            p0=initial_params, bounds=bounds,
+            method='trf', maxfev=10000, ftol=1e-10, xtol=1e-10
+        )
+        k1, k2 = popt
+        perr = np.sqrt(np.diag(pcov))
 
-            st.line_chart(fitted_df.set_index('time'))
-        else:
-            st.error(result['message'])
-    else:
-        st.error("Your file must include columns: time, d0, d1, and d2")
+        d0_fit, d1_fit, d2_fit = sequential_first_order_model(time_data, k1, k2, max_deut)
+
+        y_fit = np.concatenate([d0_fit, d1_fit, d2_fit])
+        ss_res = np.sum((y_obs - y_fit)**2)
+        ss_tot = np.sum((y_obs - np.mean(y_obs))**2)
+        r_squared = 1 - (ss_res / ss_tot)
+
+        return {
+            'k1': k1,
+            'k2': k2,
+            'k1_error': perr[0],
+            'k2_error': perr[1],
+            'd0_fit': d0_fit,
+            'd1_fit': d1_fit,
+            'd2_fit': d2_fit,
+            'r_squared': r_squared,
+            'success': True,
+            'message': 'Fit successful'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e)
+        }
