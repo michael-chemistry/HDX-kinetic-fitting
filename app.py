@@ -11,7 +11,54 @@ from pathlib import Path
 st.set_page_config(page_title="Kinetic Fitting Tool", layout="wide")
 st.title("Kinetic Fitting Tool")
 
-# Model descriptions with images and equations
+# Model descriptions
+from PIL import Image
+st.markdown("### Model Comparison")
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Single First-Order")
+    st.markdown(r"""
+**Mechanism**  
+D0 → D1
+
+**Equations**  
+$$
+D_1(t) = D_{\text{max}} \cdot \left(1 - e^{-k_1 t} \right)
+$$  
+$$
+D_0(t) = 1 - D_1(t)
+$$
+
+**Fitting Method: curve_fit**  
+- Ideal for simple, one-parameter models  
+- Provides fast and accurate results  
+- Supports parameter bounds
+""")
+    st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_container_width=True)
+
+with col2:
+    st.subheader("Sequential First-Order")
+    st.markdown(r"""
+**Mechanism**  
+D0 → D1 → D2
+
+**Equations**  
+$$
+D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1}(e^{-k_1 t} - e^{-k_2 t})
+$$  
+$$
+D_2(t) = D_{\text{max}} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} \right]
+$$  
+$$
+D_0(t) = 1 - D_1(t) - D_2(t)
+$$
+
+**Fitting Method: Trust Region Reflective (TRF)**  
+- Handles multi-parameter models  
+- Allows bound constraints  
+- Robust to parameter correlation
+""")
+    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_container_width=True) with images and equations
 col1, col2 = st.columns(2)
 
 with col1:
@@ -116,6 +163,7 @@ if model_choice == "Sequential First-Order":
 
             axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d2 - result['d2_fit'], label='D2 Residual', color='green')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
@@ -148,6 +196,7 @@ if model_choice == "Single First-Order":
 
             axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
             axs[1].set_title("Residuals")
