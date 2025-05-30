@@ -1,13 +1,10 @@
+
 import numpy as np
 from scipy.optimize import curve_fit
 
 
+# === Sequential First-Order Model ===
 def sequential_first_order_model(t, k1, k2, max_deut=0.95):
-    """
-    Calculates the fractions of D1 and D2 for a sequential first-order reaction.
-    D0 is computed as 1 - D1 - D2.
-    """
-    # Ensure k1 != k2 to avoid division by zero
     if abs(k2 - k1) < 1e-10:
         k2 += 1e-10
 
@@ -17,11 +14,9 @@ def sequential_first_order_model(t, k1, k2, max_deut=0.95):
     return d0, d1, d2
 
 
+# === Kinetic Fit Function ===
 def fit_kinetic_data(time_data, d0_data, d1_data, d2_data,
                      initial_k1=0.01, initial_k2=0.005, max_deut=0.95, min_d1=0.0):
-    """
-    Fit the HDX data using the sequential first-order kinetic model with curve_fit.
-    """
     initial_params = [initial_k1, initial_k2]
     bounds = ([0, 0], [np.inf, np.inf])
 
@@ -42,7 +37,6 @@ def fit_kinetic_data(time_data, d0_data, d1_data, d2_data,
         perr = np.sqrt(np.diag(pcov))
 
         d0_fit, d1_fit, d2_fit = sequential_first_order_model(time_data, k1, k2, max_deut)
-
         y_fit = np.concatenate([d0_fit, d1_fit, d2_fit])
         ss_res = np.sum((y_obs - y_fit)**2)
         ss_tot = np.sum((y_obs - np.mean(y_obs))**2)
