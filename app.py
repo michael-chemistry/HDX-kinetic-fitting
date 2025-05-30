@@ -32,6 +32,8 @@ $$
 - Provides fast and accurate results  
 - Supports parameter bounds
 """)
+st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
+
     st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
 
 with col2:
@@ -52,7 +54,9 @@ D_0(t) = 1 - D_1(t) - D_2(t)
 $$
 
 **Fitting Method: Trust Region Reflective (TRF)**  
-- Handles multi-parameter models  
+-
+st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_column_width=True)
+ Handles multi-parameter models  
 - Allows bound constraints  
 - Robust to parameter correlation
 """)
@@ -115,6 +119,7 @@ if model_choice == "Sequential First-Order":
 
             axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d2 - result['d2_fit'], label='D2 Residual', color='green')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
@@ -146,6 +151,7 @@ if model_choice == "Single First-Order":
             axs[0].set_title("Observed vs Fit")
 
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
