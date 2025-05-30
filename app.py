@@ -15,7 +15,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Single First-Order")
-    st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_container_width=True)
+    st.image("/mnt/data/single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_container_width=True)
 st.markdown(r"""
 **Mechanism**  
 D0 → D1
@@ -37,7 +37,7 @@ $$
 
 with col2:
     st.subheader("Sequential First-Order")
-    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d2 acid", use_container_width=True)
+    st.image("/mnt/data/sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d2 acid", use_container_width=True)
 st.markdown(r"""
 **Mechanism**  
 D0 → D1 → D2
