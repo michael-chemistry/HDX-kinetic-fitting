@@ -10,7 +10,7 @@ from Single_Kinetic_Fit import fit_single_order_data, single_first_order_model
 st.set_page_config(page_title="Kinetic Fitting Tool", layout="wide")
 st.title("Kinetic Fitting Tool")
 
-# Model descriptions
+# Descriptions and equations
 col1, col2 = st.columns(2)
 
 with col1:
@@ -34,8 +34,6 @@ $$
 """)
     st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
 
-    st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
-
 with col2:
     st.subheader("Sequential First-Order")
     st.markdown(r"""
@@ -54,15 +52,13 @@ D_0(t) = 1 - D_1(t) - D_2(t)
 $$
 
 **Fitting Method: Trust Region Reflective (TRF)**  
--
-    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_column_width=True)
- Handles multi-parameter models  
+- Handles multi-parameter models  
 - Allows bound constraints  
 - Robust to parameter correlation
 """)
     st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_column_width=True)
 
-# Dropdown for model choice
+# Model selector
 model_choice = st.sidebar.selectbox("Select Kinetic Model", ["Sequential First-Order", "Single First-Order"])
 
 with st.sidebar:
@@ -87,6 +83,7 @@ with st.sidebar:
         })
         st.download_button("Download CSV", example_data.to_csv(index=False), file_name="example_single_order.csv")
 
+# File upload
 uploaded_file = st.file_uploader("Upload your kinetic data (Excel or CSV)", type=["xlsx", "csv"])
 if uploaded_file:
     df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
@@ -94,6 +91,7 @@ else:
     df = example_data
     st.info("Using example data. Upload your own file to override.")
 
+# Fit and plot
 if model_choice == "Sequential First-Order":
     if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
         time = df['time'].values
@@ -119,7 +117,6 @@ if model_choice == "Sequential First-Order":
 
             axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
-            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d2 - result['d2_fit'], label='D2 Residual', color='green')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
@@ -152,7 +149,6 @@ if model_choice == "Single First-Order":
 
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
             axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
-            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
             axs[1].set_title("Residuals")
@@ -162,7 +158,7 @@ if model_choice == "Single First-Order":
     else:
         st.error("File must include columns: time, d1")
 
-# Show code
+# Code transparency
 if model_choice == "Sequential First-Order":
     with st.expander("Show Sequential Fit Function Code"):
         st.code(inspect.getsource(fit_kinetic_data), language="python")
