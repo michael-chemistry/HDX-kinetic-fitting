@@ -9,6 +9,9 @@ from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_mode
 st.set_page_config(page_title="Sequential Kinetic Fit", layout="wide")
 
 st.title("Sequential First-Order Kinetic Fitting Tool")
+# Sidebar model selection
+model_choice = st.sidebar.selectbox("Select Kinetic Model", ["Sequential First-Order", "Single First-Order"])
+
 
 st.markdown(r'''
 This tool fits experimental HDX data to a sequential first-order kinetic model:
@@ -57,7 +60,7 @@ else:
     df = example_data
     st.info("Using example data. Upload your own file to override.")
 
-if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
+if model_choice == 'Sequential First-Order' and if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
     time = df['time'].values
     d0, d1, d2 = df['d0'].values, df['d1'].values, df['d2'].values
 
@@ -100,3 +103,35 @@ with st.expander("Click to show the kinetic fitting function code"):
 
 with st.expander("Click to show the kinetic model equations"):
     st.code(inspect.getsource(sequential_first_order_model), language="python")
+
+
+if model_choice == "Single First-Order":
+    if all(col in df.columns for col in ['time', 'd1']):
+        time = df['time'].values
+        d1 = df['d1'].values
+        result = fit_single_order_data(time, d1, initial_k1, max_deut)
+
+        if result['success']:
+            st.success("Model fit successfully!")
+            col1, col2 = st.columns(2)
+            col1.metric("k1", f"{result['k1']:.5f} ± {result['k1_error']:.5f}")
+            col2.metric("R²", f"{result['r_squared']:.5f}")
+
+            fig, axs = plt.subplots(1, 2, figsize=(13, 5))
+            axs[0].plot(time, d1, 'o', label='D1 Obs', color='orange')
+            axs[0].plot(time, result['d1_fit'], '-', label='D1 Fit', color='orange')
+            axs[0].plot(time, 1 - d1, 'o', label='D0 Obs', color='blue')
+            axs[0].plot(time, result['d0_fit'], '-', label='D0 Fit', color='blue')
+            axs[0].legend()
+            axs[0].set_title("Observed vs Fit")
+
+            axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
+            axs[1].axhline(0, color='gray', linestyle='--')
+            axs[1].legend()
+            axs[1].set_title("Residuals")
+            st.pyplot(fig)
+        else:
+            st.error(result['message'])
+    else:
+        st.error("File must include columns: time, d1")
