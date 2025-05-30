@@ -1,5 +1,4 @@
 
-# ✅ Fixed and upgraded version of `app.py`
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -16,6 +15,12 @@ This tool fits experimental HDX data to a sequential first-order kinetic model:
 
 - D₀ → D₁ → D₂
 
+This approach is suitable for compounds with **two exchangeable protons**, where sequential deuterium incorporation occurs. 
+It is especially useful in hydrogen-deuterium exchange (HDX) studies, such as those involving small molecule metabolites or peptides with distinguishable exchange steps.
+
+The model assumes two irreversible first-order reactions with rate constants $k_1$ and $k_2$. These are fit using the Trust Region Reflective (TRF) algorithm,
+which is chosen for its ability to handle bounds on parameters and robustness against parameter correlation. 
+
 Analytical solutions for the fractions of each species:
 
 $$
@@ -29,11 +34,10 @@ D_0(t) = 1 - D_1(t) - D_2(t)
 $$
 ''')
 
-# Sidebar for parameters
 with st.sidebar:
     st.header("Fitting Parameters")
-    initial_k1 = st.number_input("Initial guess for k₁", value=0.01, format="%.5f")
-    initial_k2 = st.number_input("Initial guess for k₂", value=0.005, format="%.5f")
+    initial_k1 = st.number_input("Initial guess for k1", value=0.01, format="%.5f")
+    initial_k2 = st.number_input("Initial guess for k2", value=0.005, format="%.5f")
     max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
 
     st.subheader("Download Example File")
@@ -48,60 +52,51 @@ with st.sidebar:
 uploaded_file = st.file_uploader("Upload your kinetic data (Excel or CSV)", type=["xlsx", "csv"])
 
 if uploaded_file:
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-    else:
-        df = pd.read_excel(uploaded_file)
+    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
 else:
     df = example_data
     st.info("Using example data. Upload your own file to override.")
 
 if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
     time = df['time'].values
-    d0 = df['d0'].values
-    d1 = df['d1'].values
-    d2 = df['d2'].values
+    d0, d1, d2 = df['d0'].values, df['d1'].values, df['d2'].values
 
-    result = fit_kinetic_data(time, d0, d1, d2,
-                              initial_k1=initial_k1,
-                              initial_k2=initial_k2,
-                              max_deut=max_deut)
+    result = fit_kinetic_data(time, d0, d1, d2, initial_k1, initial_k2, max_deut)
 
     if result['success']:
         st.success("Model fit successfully!")
-        st.metric("k₁", f"{result['k1']:.5f} ± {result['k1_error']:.5f}")
-        st.metric("k₂", f"{result['k2']:.5f} ± {result['k2_error']:.5f}")
-        st.metric("R²", f"{result['r_squared']:.5f}")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("k1", f"{result['k1']:.5f} ± {result['k1_error']:.5f}")
+        col2.metric("k2", f"{result['k2']:.5f} ± {result['k2_error']:.5f}")
+        col3.metric("R²", f"{result['r_squared']:.5f}")
 
-        residuals = np.concatenate([
-            d0 - result['d0_fit'],
-            d1 - result['d1_fit'],
-            d2 - result['d2_fit']
-        ])
-
+        colors = {'d0': 'blue', 'd1': 'orange', 'd2': 'green'}
         fig, axs = plt.subplots(1, 2, figsize=(13, 5))
 
-        axs[0].plot(time, d0, 'o', label='D₀ Obs')
-        axs[0].plot(time, d1, 'o', label='D₁ Obs')
-        axs[0].plot(time, d2, 'o', label='D₂ Obs')
-        axs[0].plot(time, result['d0_fit'], '-', label='D₀ Fit')
-        axs[0].plot(time, result['d1_fit'], '-', label='D₁ Fit')
-        axs[0].plot(time, result['d2_fit'], '-', label='D₂ Fit')
-        axs[0].set_title("Observed vs Fit")
+        axs[0].plot(time, d0, 'o', label='D0 Obs', color=colors['d0'])
+        axs[0].plot(time, d1, 'o', label='D1 Obs', color=colors['d1'])
+        axs[0].plot(time, d2, 'o', label='D2 Obs', color=colors['d2'])
+        axs[0].plot(time, result['d0_fit'], '-', label='D0 Fit', color=colors['d0'])
+        axs[0].plot(time, result['d1_fit'], '-', label='D1 Fit', color=colors['d1'])
+        axs[0].plot(time, result['d2_fit'], '-', label='D2 Fit', color=colors['d2'])
         axs[0].legend()
+        axs[0].set_title("Observed vs Fit")
 
-        axs[1].scatter(np.tile(time, 3), residuals, color='red')
+        axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Resid', color=colors['d0'])
+        axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Resid', color=colors['d1'])
+        axs[1].scatter(time, d2 - result['d2_fit'], label='D2 Resid', color=colors['d2'])
         axs[1].axhline(0, color='gray', linestyle='--')
+        axs[1].legend()
         axs[1].set_title("Residuals")
 
         st.pyplot(fig)
     else:
         st.error(result['message'])
 else:
-    st.error("Your file must include columns: time, d0, d1, and d2")
+    st.error("File must include columns: time, d0, d1, d2")
 
-with st.expander("🔍 Click to show the kinetic fitting function code"):
+with st.expander("Click to show the kinetic fitting function code"):
     st.code(inspect.getsource(fit_kinetic_data), language="python")
 
-with st.expander("📘 Click to show the kinetic model equations"):
+with st.expander("Click to show the kinetic model equations"):
     st.code(inspect.getsource(sequential_first_order_model), language="python")
