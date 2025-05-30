@@ -33,11 +33,29 @@ This model was chosen because it captures the kinetic progression between unmodi
 The optimization is performed using the `curve_fit` function from SciPy with the Trust Region Reflective (TRF) algorithm.
 This method was selected because it supports bound-constrained nonlinear least squares optimization, which is important for enforcing the physically meaningful constraint that rate constants must be non-negative. It also performs robustly for problems with moderate residuals and correlated parameters like $k_1$ and $k_2$.
 
----""")
+""")
 
-with st.expander("📜 Click to show/hide the source code"):
-    with open("app.py", "r") as f:
-        st.code(f.read(), language="python")
+with st.expander("🧠 Click to view how k₁ and k₂ are calculated (code transparency)"):
+    st.markdown(r"""
+The rate constants $k_1$ and $k_2$ are estimated by fitting your data to the model using SciPy's `curve_fit` function, which solves a nonlinear least-squares optimization problem using the Trust Region Reflective (TRF) algorithm.
+
+```python
+from scipy.optimize import curve_fit
+
+def combined_model(t_dummy, k1, k2):
+    d0, d1, d2 = sequential_first_order_model(time_data, k1, k2, max_deut)
+    return np.concatenate([d0, d1, d2])
+
+popt, pcov = curve_fit(
+    combined_model, t_dummy, y_obs,
+    p0=[initial_k1, initial_k2],
+    bounds=([0, 0], [np.inf, np.inf]),
+    method='trf', maxfev=10000, ftol=1e-10, xtol=1e-10
+)
+
+k1, k2 = popt
+```
+""")
 
 st.markdown("""
 ### Step-by-Step Instructions
@@ -76,7 +94,7 @@ if uploaded_file:
         d1 = df['d1'].values
         d2 = df['d2'].values
 
-        min_d1 = 1.0 - max_deut  # Enforce conservation: D1 cannot drop below remainder when D2 is at maximum
+        min_d1 = 1.0 - max_deut
 
         result = fit_kinetic_data(time, d0, d1, d2,
                                    initial_k1=initial_k1,
