@@ -9,7 +9,7 @@ from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_mode
 st.set_page_config(page_title="Sequential Kinetic Fit", layout="centered")
 st.title("Sequential First-Order Kinetic Fitting Tool")
 
-st.markdown(r'''
+st.markdown(r"""
 This tool fits experimental HDX data to a sequential first-order kinetic model:
 
 - D₀ → D₁ → D₂
@@ -22,37 +22,35 @@ D_0(t) = 1 - D_1(t) - D_2(t)
 $$
 
 $$
-D_1(t) = D_{\\text{max}} \\cdot \\frac{k_1}{k_2 - k_1} (e^{-k_1 t} - e^{-k_2 t})
+D_1(t) = D_\text{max} \cdot \frac{k_1}{k_2 - k_1} (e^{-k_1 t} - e^{-k_2 t})
 $$
 
 $$
-D_2(t) = D_{\\text{max}} \\cdot \\left[1 - \\frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1}\\right]
+D_2(t) = D_\text{max} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1}\right]
 $$
 
-This model was chosen because it captures the kinetic progression between unmodified, singly modified, and doubly modified species without requiring assumptions of reversibility, which aligns with the irreversible nature of deuterium exchange in many experimental systems.
+This model captures irreversible progression from unmodified (D₀) to singly and doubly deuterated species (D₁, D₂).
+The TRF algorithm (Trust Region Reflective) used in optimization enforces non-negativity of rate constants and performs robustly under correlated parameters.
 
-The optimization is performed using the `curve_fit` function from SciPy with the Trust Region Reflective (TRF) algorithm.
-This method was selected because it supports bound-constrained nonlinear least squares optimization, ensuring physical plausibility of rate constants and strong convergence for correlated parameters.
-''')
+---""")
 
-with st.expander("📜 Click to show/hide fitting source code logic"):
+with st.expander("📜 Click to show/hide the k₁/k₂ fitting code"):
     with open("Sequential_Kinetic_Fit.py", "r") as f:
-        for line in f:
-            if "def fit_kinetic_data" in line or "curve_fit" in line or "r_squared" in line:
-                st.code(line, language="python")
+        st.code(f.read(), language="python")
 
-st.markdown(r'''
+st.markdown("""
 ### Step-by-Step Instructions
 1. Download the example CSV to understand the required format.
 2. Upload your experimental data file (Excel format).
-3. Optionally adjust the initial guesses and fitting constraints.
+3. Optionally adjust the initial guesses.
 4. View optimized parameters ($k_1$, $k_2$, $R^2$) and fitted curves.
-''')
+
+---""")
 
 with st.sidebar:
     st.header("Fitting Parameters")
     initial_k1 = st.number_input("Initial guess for k₁ (recommended: ~0.01)", value=0.01, format="%.5f")
-    initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005, or ~½ of k₁)", value=0.005, format="%.5f")
+    initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005)", value=0.005, format="%.5f")
     max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
 
     st.subheader("Download Example File")
@@ -77,7 +75,7 @@ if uploaded_file:
         d1 = df['d1'].values
         d2 = df['d2'].values
 
-        min_d1 = 1.0 - max_deut
+        min_d1 = 1.0 - max_deut  # Enforce conservation: D1 cannot drop below remainder when D2 is at maximum
 
         result = fit_kinetic_data(time, d0, d1, d2,
                                    initial_k1=initial_k1,
@@ -103,6 +101,7 @@ if uploaded_file:
                 'D2 Fit': result['d2_fit']
             })
             st.dataframe(fitted_df, use_container_width=True)
+
             st.line_chart(fitted_df.set_index('time'))
         else:
             st.error(result['message'])
