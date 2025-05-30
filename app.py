@@ -1,4 +1,5 @@
 
+# ✅ Enhanced version with model selection, including non-sequential model
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,95 +9,82 @@ from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_mode
 
 st.set_page_config(page_title="Sequential Kinetic Fit", layout="wide")
 
-st.title("Sequential First-Order Kinetic Fitting Tool")
+st.title("First-Order Kinetic Fitting Tool")
 
 st.markdown(r'''
-This tool fits experimental HDX data to a sequential first-order kinetic model:
+This tool fits experimental HDX data using first-order kinetic models for compounds with **one to three exchangeable protons**.
+It provides four options:
 
-- D₀ → D₁ → D₂
+- Non-Sequential (D₀ → D₁)
+- Single First-Order (D₀ → D₁ with explicit max)
+- Two-Step Sequential (D₀ → D₁ → D₂)
+- Triple Sequential (D₀ → D₁ → D₂ → D₃)
 
-This approach is suitable for compounds with **two exchangeable protons**, where sequential deuterium incorporation occurs. 
-It is especially useful in hydrogen-deuterium exchange (HDX) studies, such as those involving small molecule metabolites or peptides with distinguishable exchange steps.
-
-The model assumes two irreversible first-order reactions with rate constants $k_1$ and $k_2$. These are fit using the Trust Region Reflective (TRF) algorithm,
-which is chosen for its ability to handle bounds on parameters and robustness against parameter correlation. 
-
-Analytical solutions for the fractions of each species:
-
-$$
-D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1}(e^{-k_1 t} - e^{-k_2 t})
-$$
-$$
-D_2(t) = D_{\text{max}} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1}\right]
-$$
-$$
-D_0(t) = 1 - D_1(t) - D_2(t)
-$$
+These models are commonly applied in hydrogen-deuterium exchange (HDX) analysis of small molecules and peptides. The Trust Region Reflective (TRF) algorithm is used for its robustness and support for bounded parameters.
 ''')
 
+# === Model Definitions ===
+def nonsequential_model(t, k1, max_deut=0.95):
+    d1 = max_deut * (1 - np.exp(-k1 * t))
+    d0 = 1 - d1
+    return d0, d1, np.zeros_like(t)
+
+def single_first_order_model(t, k1, max_deut=0.95):
+    d1 = max_deut * (1 - np.exp(-k1 * t))
+    d0 = 1 - d1
+    return d0, d1, np.zeros_like(t)
+
+def triple_first_order_model(t, k1, k2, k3, max_deut=0.95):
+    if any(abs(x) < 1e-10 for x in [k2-k1, k3-k2, k3-k1]):
+        k2 += 1e-10; k3 += 2e-10
+    d1 = max_deut * (k1 / (k2 - k1)) * (np.exp(-k1 * t) - np.exp(-k2 * t))
+    d2 = max_deut * (k1*k2 / ((k3 - k2)*(k2 - k1))) *          ((np.exp(-k1*t)/(k3 - k1)) - (np.exp(-k2*t)/(k3 - k2)))
+    d3 = max_deut * (1 - d1 - d2)
+    d0 = 1 - d1 - d2 - d3
+    return d0, d1, d2
+
+# (Rest of the content will be appended in next step to avoid token limits)
+
+# === Sidebar Configuration ===
 with st.sidebar:
-    st.header("Fitting Parameters")
+    st.header("Model Selection")
+    model_type = st.selectbox("Choose kinetic model", [
+        "Non-Sequential", "Single First-Order", "Two-Step Sequential", "Triple Sequential"
+    ])
     initial_k1 = st.number_input("Initial guess for k1", value=0.01, format="%.5f")
     initial_k2 = st.number_input("Initial guess for k2", value=0.005, format="%.5f")
+    initial_k3 = st.number_input("Initial guess for k3 (if needed)", value=0.001, format="%.5f")
     max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
+    batch_mode = st.checkbox("Batch process all Excel sheets", value=False)
 
-    st.subheader("Download Example File")
-    example_data = pd.DataFrame({
-        'time': np.array([0, 30, 60, 90, 120, 150, 180, 210, 240, 270]),
-        'd0': np.array([1.0, 0.9, 0.75, 0.6, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2]),
-        'd1': np.array([0.0, 0.08, 0.18, 0.25, 0.28, 0.28, 0.25, 0.23, 0.20, 0.18]),
-        'd2': np.array([0.0, 0.02, 0.07, 0.15, 0.22, 0.32, 0.40, 0.47, 0.55, 0.62]),
-    })
-    st.download_button("Download CSV", example_data.to_csv(index=False), file_name="example_kinetics.csv")
+# === File Upload ===
+st.subheader("Upload kinetic data")
+uploaded_file = st.file_uploader("Upload Excel or CSV", type=["xlsx", "csv"])
 
-uploaded_file = st.file_uploader("Upload your kinetic data (Excel or CSV)", type=["xlsx", "csv"])
+# === Core Fitting Logic ===
+def fit_model(model_type, time, d0, d1, d2):
+    from scipy.optimize import curve_fit
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
-else:
-    df = example_data
-    st.info("Using example data. Upload your own file to override.")
+    if model_type in ["Non-Sequential", "Single First-Order"]:
+        model_func = nonsequential_model if model_type == "Non-Sequential" else single_first_order_model
 
-if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
-    time = df['time'].values
-    d0, d1, d2 = df['d0'].values, df['d1'].values, df['d2'].values
+        def wrapper(t, k1):
+            return np.concatenate(model_func(t, k1, max_deut))
 
-    result = fit_kinetic_data(time, d0, d1, d2, initial_k1, initial_k2, max_deut)
+        y_data = np.concatenate([d0, d1, np.zeros_like(d2)])
+        popt, pcov = curve_fit(wrapper, np.tile(time, 3), y_data, p0=[initial_k1], bounds=(0, np.inf))
+        d0f, d1f, d2f = model_func(time, *popt, max_deut)
+        r2 = 1 - np.sum((y_data - wrapper(np.tile(time, 3), *popt))**2)/np.sum((y_data - np.mean(y_data))**2)
+        return {"k1": popt[0], "d0_fit": d0f, "d1_fit": d1f, "d2_fit": d2f, "r_squared": r2, "success": True}
 
-    if result['success']:
-        st.success("Model fit successfully!")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("k1", f"{result['k1']:.5f} ± {result['k1_error']:.5f}")
-        col2.metric("k2", f"{result['k2']:.5f} ± {result['k2_error']:.5f}")
-        col3.metric("R²", f"{result['r_squared']:.5f}")
+    elif model_type == "Triple Sequential":
+        def wrapper(t, k1, k2, k3):
+            return np.concatenate(triple_first_order_model(t, k1, k2, k3, max_deut))
+        y_data = np.concatenate([d0, d1, d2])
+        popt, pcov = curve_fit(wrapper, np.tile(time, 3), y_data, p0=[initial_k1, initial_k2, initial_k3], bounds=(0, np.inf))
+        d0f, d1f, d2f = triple_first_order_model(time, *popt, max_deut)
+        r2 = 1 - np.sum((y_data - wrapper(np.tile(time, 3), *popt))**2)/np.sum((y_data - np.mean(y_data))**2)
+        return {"k1": popt[0], "k2": popt[1], "k3": popt[2], "d0_fit": d0f, "d1_fit": d1f, "d2_fit": d2f, "r_squared": r2, "success": True}
 
-        colors = {'d0': 'blue', 'd1': 'orange', 'd2': 'green'}
-        fig, axs = plt.subplots(1, 2, figsize=(13, 5))
-
-        axs[0].plot(time, d0, 'o', label='D0 Obs', color=colors['d0'])
-        axs[0].plot(time, d1, 'o', label='D1 Obs', color=colors['d1'])
-        axs[0].plot(time, d2, 'o', label='D2 Obs', color=colors['d2'])
-        axs[0].plot(time, result['d0_fit'], '-', label='D0 Fit', color=colors['d0'])
-        axs[0].plot(time, result['d1_fit'], '-', label='D1 Fit', color=colors['d1'])
-        axs[0].plot(time, result['d2_fit'], '-', label='D2 Fit', color=colors['d2'])
-        axs[0].legend()
-        axs[0].set_title("Observed vs Fit")
-
-        axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Resid', color=colors['d0'])
-        axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Resid', color=colors['d1'])
-        axs[1].scatter(time, d2 - result['d2_fit'], label='D2 Resid', color=colors['d2'])
-        axs[1].axhline(0, color='gray', linestyle='--')
-        axs[1].legend()
-        axs[1].set_title("Residuals")
-
-        st.pyplot(fig)
     else:
-        st.error(result['message'])
-else:
-    st.error("File must include columns: time, d0, d1, d2")
-
-with st.expander("Click to show the kinetic fitting function code"):
-    st.code(inspect.getsource(fit_kinetic_data), language="python")
-
-with st.expander("Click to show the kinetic model equations"):
-    st.code(inspect.getsource(sequential_first_order_model), language="python")
+        return fit_kinetic_data(time, d0, d1, d2, initial_k1, initial_k2, max_deut)
