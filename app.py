@@ -168,7 +168,7 @@ else:
 
 
 
-elif model_choice == "Single First-Order":
+if model_choice == "Single First-Order":
     st.markdown(r'''
 ### Single First-Order Kinetic Model
 
