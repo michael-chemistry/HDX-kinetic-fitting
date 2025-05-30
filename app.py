@@ -50,14 +50,18 @@ if model_choice == "Sequential First-Order":
     st.markdown(r"""
 This tool fits experimental HDX data to a sequential first-order kinetic model:
 
-- $D_0 ightarrow D_1 ightarrow D_2$
+- $D_0 
+\rightarrow D_1 
+\rightarrow D_2$
 
 $$
-D_1(t) = D_{	ext{max}} \cdot rac{k_1}{k_2 - k_1} \left( e^{-k_1 t} - e^{-k_2 t} ight)
+D_1(t) = D_{	ext{max}} \cdot rac{k_1}{k_2 - k_1} \left( e^{-k_1 t} - e^{-k_2 t} 
+ight)
 $$
 
 $$
-D_2(t) = D_{	ext{max}} \left[ 1 - rac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} ight]
+D_2(t) = D_{	ext{max}} \left[ 1 - rac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} 
+ight]
 $$
 
 $$
@@ -105,10 +109,12 @@ elif model_choice == "Single First-Order":
     st.markdown(r"""
 This tool fits a one-step first-order model:
 
-- $D_0 ightarrow D_1$
+- $D_0 
+\rightarrow D_1$
 
 $$
-D_1(t) = D_{	ext{max}} \cdot \left(1 - e^{-k_1 t} ight)
+D_1(t) = D_{	ext{max}} \cdot \left(1 - e^{-k_1 t} 
+ight)
 $$
 
 $$
