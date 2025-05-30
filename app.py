@@ -194,7 +194,7 @@ We use `curve_fit` with bounded optimization because:
 - It is **fast** and provides accurate error estimates for $k_1$ in monotonic growth behavior.
 ''')
 
-port streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -394,7 +394,7 @@ if model_choice == "Sequential First-Order":
         st.code(inspect.getsource(fit_kinetic_data), language="python")
     with st.expander("Click to show the kinetic model equations"):
         st.code(inspect.getsource(sequential_first_order_model), language="python")
-port streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -589,7 +589,7 @@ We use `curve_fit` with bounded optimization because:
 - It is **fast** and provides accurate error estimates for $k_1$ in monotonic growth behavior.
 ''')
 
-port streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
