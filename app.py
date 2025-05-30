@@ -121,6 +121,62 @@ else:
         st.error("File must include columns: time, d1")
 
 if model_choice == "Sequential First-Order":
+    st.markdown(r'''
+### Sequential First-Order Kinetic Model
+
+The sequential model represents the transformation:
+
+$$
+D_0 \xrightarrow{k_1} D_1 \xrightarrow{k_2} D_2
+$$
+
+The population equations over time:
+
+$$
+D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1}(e^{-k_1 t} - e^{-k_2 t})
+$$
+
+$$
+D_2(t) = D_{\text{max}} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} \right]
+$$
+
+$$
+D_0(t) = 1 - D_1(t) - D_2(t)
+$$
+
+**Fitting Justification:**  
+The `Trust Region Reflective (TRF)` algorithm is used because it:
+- Supports **bounded** nonlinear least squares.
+- Is **robust** to moderately correlated parameters (as often encountered with $k_1$, $k_2$).
+''')
+
+elif model_choice == "Single First-Order":
+    st.markdown(r'''
+### Single First-Order Kinetic Model
+
+This model assumes only one exchangeable site:
+
+$$
+D_0 \xrightarrow{k_1} D_1
+$$
+
+The population equations over time:
+
+$$
+D_1(t) = D_{\text{max}} \cdot \left(1 - e^{-k_1 t} \right)
+$$
+
+$$
+D_0(t) = 1 - D_1(t)
+$$
+
+**Fitting Justification:**  
+We use `curve_fit` with bounded optimization because:
+- It efficiently handles **simple one-parameter models**.
+- It is **fast** and provides accurate error estimates for $k_1$ in monotonic growth behavior.
+''')
+
+if model_choice == "Sequential First-Order":
     with st.expander("Click to show the kinetic fitting function code"):
         st.code(inspect.getsource(fit_kinetic_data), language="python")
     with st.expander("Click to show the kinetic model equations"):
