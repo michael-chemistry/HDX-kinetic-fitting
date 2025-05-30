@@ -36,7 +36,6 @@ with st.sidebar:
         })
         st.download_button("Download CSV", example_data.to_csv(index=False), file_name="example_single_order.csv")
 
-# File upload
 uploaded_file = st.file_uploader("Upload your kinetic data (Excel or CSV)", type=["xlsx", "csv"])
 if uploaded_file:
     df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
@@ -44,47 +43,18 @@ else:
     df = example_data
     st.info("Using example data. Upload your own file to override.")
 
-# SEQUENTIAL FIRST-ORDER MODEL
+# Sequential Model
 if model_choice == "Sequential First-Order":
     st.header("Sequential First-Order Kinetic Fitting Tool")
-    st.markdown(r"""
-This tool fits experimental HDX data to a sequential first-order kinetic model:
+    st.markdown("This tool fits experimental HDX data to a sequential first-order kinetic model:")
+    st.latex("D_0 \rightarrow D_1 \rightarrow D_2")
+    st.latex("D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1} (e^{-k_1 t} - e^{-k_2 t})")
+    st.latex("D_2(t) = D_{\text{max}} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} \right]")
+    st.latex("D_0(t) = 1 - D_1(t) - D_2(t)")
 
-$D_0 \rightarrow D_1 \rightarrow D_2$
-
-\[
-D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1} \left( e^{-k_1 t} - e^{-k_2 t} \right)
-\]
-
-\[
-D_2(t) = D_{\text{max}} \cdot \left[ 1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} \right]
-\]
-
-\[
-D_0(t) = 1 - D_1(t) - D_2(t)
-\]
-""")
-
-- $D_0 
-\rightarrow D_1 
-\rightarrow D_2$
-
-$$
-D_1(t) = D_{	ext{max}} \cdot rac{k_1}{k_2 - k_1} \left( e^{-k_1 t} - e^{-k_2 t} 
-ight)
-$$
-
-$$
-D_2(t) = D_{	ext{max}} \left[ 1 - rac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} 
-ight]
-$$
-
-$$
-D_0(t) = 1 - D_1(t) - D_2(t)
-$$
-""")
     if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
-        time, d0, d1, d2 = df['time'].values, df['d0'].values, df['d1'].values, df['d2'].values
+        time = df['time'].values
+        d0, d1, d2 = df['d0'].values, df['d1'].values, df['d2'].values
         result = fit_kinetic_data(time, d0, d1, d2, initial_k1, initial_k2, max_deut)
         if result['success']:
             st.success("Model fit successfully!")
@@ -118,35 +88,14 @@ $$
         else:
             st.error(result['message'])
 
-# SINGLE FIRST-ORDER MODEL
+# Single Model
 elif model_choice == "Single First-Order":
     st.header("Single First-Order Kinetic Fitting Tool")
-    st.markdown(r"""
-This tool fits a one-step first-order model:
+    st.markdown("This tool fits a one-step first-order kinetic model:")
+    st.latex("D_0 \rightarrow D_1")
+    st.latex("D_1(t) = D_{\text{max}} \cdot (1 - e^{-k_1 t})")
+    st.latex("D_0(t) = 1 - D_1(t)")
 
-$D_0 \rightarrow D_1$
-
-\[
-D_1(t) = D_{\text{max}} \cdot \left(1 - e^{-k_1 t} \right)
-\]
-
-\[
-D_0(t) = 1 - D_1(t)
-\]
-""")
-
-- $D_0 
-\rightarrow D_1$
-
-$$
-D_1(t) = D_{	ext{max}} \cdot \left(1 - e^{-k_1 t} 
-ight)
-$$
-
-$$
-D_0(t) = 1 - D_1(t)
-$$
-""")
     if all(col in df.columns for col in ['time', 'd1']):
         time = df['time'].values
         d1 = df['d1'].values
