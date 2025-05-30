@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_model
 
 st.set_page_config(page_title="Sequential Kinetic Fit", layout="wide")
@@ -37,7 +37,7 @@ The optimization is performed using SciPy’s `curve_fit` with the **Trust Regio
 with st.sidebar:
     st.header("Fitting Parameters")
     initial_k1 = st.number_input("Initial guess for k₁ (recommended: ~0.01)", value=0.01, format="%.5f")
-    initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005)", value=0.005, format="%.5f")
+    initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005, or ~½ of k₁)", value=0.005, format="%.5f")
     max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
 
     st.subheader("Download Example File")
@@ -77,29 +77,37 @@ if uploaded_file:
             col1, col2 = st.columns(2)
 
             with col1:
-                fig_main = go.Figure()
-                fig_main.add_trace(go.Scatter(x=time, y=d0, mode='markers', name='D0 Observed'))
-                fig_main.add_trace(go.Scatter(x=time, y=d1, mode='markers', name='D1 Observed'))
-                fig_main.add_trace(go.Scatter(x=time, y=d2, mode='markers', name='D2 Observed'))
-                fig_main.add_trace(go.Scatter(x=time, y=d0_fit, mode='lines', name='D0 Fit'))
-                fig_main.add_trace(go.Scatter(x=time, y=result['d1_fit'], mode='lines', name='D1 Fit'))
-                fig_main.add_trace(go.Scatter(x=time, y=result['d2_fit'], mode='lines', name='D2 Fit'))
-                fig_main.update_layout(title="Observed vs Fitted", xaxis_title="Time", yaxis_title="Fraction")
-                st.plotly_chart(fig_main, use_container_width=True)
+                fig, ax = plt.subplots()
+                ax.plot(time, d0, 'o', label='D0 Observed')
+                ax.plot(time, d1, 'o', label='D1 Observed')
+                ax.plot(time, d2, 'o', label='D2 Observed')
+                ax.plot(time, d0_fit, '-', label='D0 Fit')
+                ax.plot(time, result['d1_fit'], '-', label='D1 Fit')
+                ax.plot(time, result['d2_fit'], '-', label='D2 Fit')
+                ax.set_title("Observed vs Fitted")
+                ax.set_xlabel("Time")
+                ax.set_ylabel("Fraction")
+                ax.legend()
+                st.pyplot(fig)
 
             with col2:
-                residual_len = len(result['residuals']) // 3
-                fig_resid = go.Figure()
-                fig_resid.add_trace(go.Scatter(x=time, y=result['residuals'][:residual_len], mode='lines+markers', name='D0 Residuals'))
-                fig_resid.add_trace(go.Scatter(x=time, y=result['residuals'][residual_len:2*residual_len], mode='lines+markers', name='D1 Residuals'))
-                fig_resid.add_trace(go.Scatter(x=time, y=result['residuals'][2*residual_len:], mode='lines+markers', name='D2 Residuals'))
-                fig_resid.update_layout(title="Residuals", xaxis_title="Time", yaxis_title="Residual")
-                st.plotly_chart(fig_resid, use_container_width=True)
+                residuals = result['residuals']
+                fig2, ax2 = plt.subplots()
+                N = len(time)
+                ax2.plot(time, residuals[:N], label='D0 Residuals')
+                ax2.plot(time, residuals[N:2*N], label='D1 Residuals')
+                ax2.plot(time, residuals[2*N:], label='D2 Residuals')
+                ax2.set_title("Residuals")
+                ax2.set_xlabel("Time")
+                ax2.set_ylabel("Residual")
+                ax2.legend()
+                st.pyplot(fig2)
 
             with st.expander("🔍 Click to view fitting function source code"):
-                from inspect import getsource
+                import inspect
                 from Sequential_Kinetic_Fit import fit_kinetic_data
-                st.code(getsource(fit_kinetic_data), language="python")
+                st.code(inspect.getsource(fit_kinetic_data), language="python")
+
         else:
             st.error(result['message'])
     else:
