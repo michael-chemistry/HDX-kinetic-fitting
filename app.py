@@ -15,13 +15,15 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Single First-Order")
-    st.markdown(r"""
+    st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
+st.markdown(r"""
 **Mechanism**  
 D0 → D1
 
 **Equations**  
 $$
-D_1(t) = D_{	ext{max}} \cdot \left(1 - e^{-k_1 t} ight)
+D_1(t) = D_{	ext{max}} \cdot \left(1 - e^{-k_1 t} 
+ight)
 $$  
 $$
 D_0(t) = 1 - D_1(t)
@@ -35,7 +37,8 @@ $$
 
 with col2:
     st.subheader("Sequential First-Order")
-    st.markdown(r"""
+    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d2 acid", use_column_width=True)
+st.markdown(r"""
 **Mechanism**  
 D0 → D1 → D2
 
@@ -44,7 +47,8 @@ $$
 D_1(t) = D_{	ext{max}} \cdot rac{k_1}{k_2 - k_1}(e^{-k_1 t} - e^{-k_2 t})
 $$  
 $$
-D_2(t) = D_{	ext{max}} \cdot \left[1 - rac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} ight]
+D_2(t) = D_{	ext{max}} \cdot \left[1 - rac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} 
+ight]
 $$  
 $$
 D_0(t) = 1 - D_1(t) - D_2(t)
@@ -116,6 +120,7 @@ if model_choice == "Sequential First-Order":
 
             axs[1].scatter(time, d0 - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].scatter(time, d2 - result['d2_fit'], label='D2 Residual', color='green')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
@@ -147,6 +152,7 @@ if model_choice == "Single First-Order":
             axs[0].set_title("Observed vs Fit")
 
             axs[1].scatter(time, d1 - result['d1_fit'], label='D1 Residual', color='orange')
+            axs[1].scatter(time, (1 - d1) - result['d0_fit'], label='D0 Residual', color='blue')
             axs[1].axhline(0, color='gray', linestyle='--')
             axs[1].legend()
             axs[1].set_title("Residuals")
