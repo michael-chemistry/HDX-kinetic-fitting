@@ -32,7 +32,7 @@ $$
 - Provides fast and accurate results  
 - Supports parameter bounds
 """)
-st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
+    st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
 
     st.image("single_structure.png", caption="3-methyl-2-oxopentanoic-3-d acid", use_column_width=True)
 
@@ -55,7 +55,7 @@ $$
 
 **Fitting Method: Trust Region Reflective (TRF)**  
 -
-st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_column_width=True)
+    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_column_width=True)
  Handles multi-parameter models  
 - Allows bound constraints  
 - Robust to parameter correlation
