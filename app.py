@@ -10,6 +10,52 @@ from Single_Kinetic_Fit import fit_single_order_data, single_first_order_model
 st.set_page_config(page_title="Kinetic Fitting Tool", layout="wide")
 st.title("Kinetic Fitting Tool")
 
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("Single First-Order")
+    st.markdown(r'''
+**Mechanism**  
+D₀ → D₁
+
+**Equations**  
+$$
+D_1(t) = D_{\text{max}} \cdot \left(1 - e^{-k_1 t} \right)
+$$  
+$$
+D_0(t) = 1 - D_1(t)
+$$
+
+**Fitting Method: curve_fit**  
+- Ideal for simple, one-parameter models  
+- Provides fast and accurate results  
+- Supports parameter bounds
+''')
+
+with col2:
+    st.subheader("Sequential First-Order")
+    st.markdown(r'''
+**Mechanism**  
+D₀ → D₁ → D₂
+
+**Equations**  
+$$
+D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1}(e^{-k_1 t} - e^{-k_2 t})
+$$  
+$$
+D_2(t) = D_{\text{max}} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} \right]
+$$  
+$$
+D_0(t) = 1 - D_1(t) - D_2(t)
+$$
+
+**Fitting Method: Trust Region Reflective (TRF)**  
+- Handles multi-parameter models  
+- Allows bound constraints  
+- Robust to parameter correlation
+''')
+
+
 model_choice = st.sidebar.selectbox("Select Kinetic Model", ["Sequential First-Order", "Single First-Order"])
 
 st.markdown(r"""
@@ -120,35 +166,7 @@ else:
     else:
         st.error("File must include columns: time, d1")
 
-if model_choice == "Sequential First-Order":
-    st.markdown(r'''
-### Sequential First-Order Kinetic Model
 
-The sequential model represents the transformation:
-
-$$
-D_0 \xrightarrow{k_1} D_1 \xrightarrow{k_2} D_2
-$$
-
-The population equations over time:
-
-$$
-D_1(t) = D_{\text{max}} \cdot \frac{k_1}{k_2 - k_1}(e^{-k_1 t} - e^{-k_2 t})
-$$
-
-$$
-D_2(t) = D_{\text{max}} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1} \right]
-$$
-
-$$
-D_0(t) = 1 - D_1(t) - D_2(t)
-$$
-
-**Fitting Justification:**  
-The `Trust Region Reflective (TRF)` algorithm is used because it:
-- Supports **bounded** nonlinear least squares.
-- Is **robust** to moderately correlated parameters (as often encountered with $k_1$, $k_2$).
-''')
 
 elif model_choice == "Single First-Order":
     st.markdown(r'''
@@ -177,12 +195,12 @@ We use `curve_fit` with bounded optimization because:
 ''')
 
 if model_choice == "Sequential First-Order":
-    with st.expander("Click to show the kinetic fitting function code"):
+    with st.expander("Click to show the kinetic fitting function code")("Click to show the kinetic fitting function code"):
         st.code(inspect.getsource(fit_kinetic_data), language="python")
     with st.expander("Click to show the kinetic model equations"):
         st.code(inspect.getsource(sequential_first_order_model), language="python")
-else:
-    with st.expander("Click to show the kinetic fitting function code"):
+elif model_choice == "Single First-Order":
+    with st.expander("Click to show the kinetic fitting function code")("Click to show the kinetic fitting function code"):
         st.code(inspect.getsource(fit_single_order_data), language="python")
     with st.expander("Click to show the kinetic model equations"):
         st.code(inspect.getsource(single_first_order_model), language="python")
