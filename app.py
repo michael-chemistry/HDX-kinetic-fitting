@@ -6,10 +6,10 @@ import base64
 import io
 from Sequential_Kinetic_Fit import fit_kinetic_data, sequential_first_order_model
 
-st.set_page_config(page_title="Sequential Kinetic Fit", layout="centered")
+st.set_page_config(page_title="Sequential Kinetic Fit", layout="wide")
 st.title("Sequential First-Order Kinetic Fitting Tool")
 
-st.markdown(r"""
+st.markdown(r'''
 This tool fits experimental HDX data to a sequential first-order kinetic model:
 
 - D₀ → D₁ → D₂
@@ -29,81 +29,81 @@ $$
 D_2(t) = D_\text{max} \cdot \left[1 - \frac{k_2 e^{-k_1 t} - k_1 e^{-k_2 t}}{k_2 - k_1}\right]
 $$
 
-This model captures irreversible progression from unmodified (D₀) to singly and doubly deuterated species (D₁, D₂).
-The TRF algorithm (Trust Region Reflective) used in optimization enforces non-negativity of rate constants and performs robustly under correlated parameters.
+This model captures irreversible deuterium incorporation across 3 species. The `curve_fit` function from SciPy with the Trust Region Reflective (TRF) method is used to estimate $k_1$ and $k_2$, allowing non-negative bounds and robust behavior for correlated parameters.
+''')
 
----""")
+with st.expander("📜 Show fitting code logic"):
+    st.code(
+        '''
+from scipy.optimize import curve_fit
+def fit_kinetic_data(...):
+    ...
+    def combined_model(t_dummy, k1, k2):
+        d0, d1, d2 = sequential_first_order_model(time_data, k1, k2, max_deut)
+        return np.concatenate([d0, d1, d2])
+    y_obs = np.concatenate([d0_data, d1_data, d2_data])
+    popt, _ = curve_fit(combined_model, ...)
+    return k1, k2, d0_fit, d1_fit, d2_fit
+        ''', language="python"
+    )
 
-with st.expander("📜 Click to show/hide the k₁/k₂ fitting code"):
-    with open("Sequential_Kinetic_Fit.py", "r") as f:
-        st.code(f.read(), language="python")
+col1, col2 = st.columns([1.3, 2])
 
-st.markdown("""
-### Step-by-Step Instructions
-1. Download the example CSV to understand the required format.
-2. Upload your experimental data file (Excel format).
-3. Optionally adjust the initial guesses.
-4. View optimized parameters ($k_1$, $k_2$, $R^2$) and fitted curves.
-
----""")
-
-with st.sidebar:
-    st.header("Fitting Parameters")
-    initial_k1 = st.number_input("Initial guess for k₁ (recommended: ~0.01)", value=0.01, format="%.5f")
-    initial_k2 = st.number_input("Initial guess for k₂ (recommended: ~0.005)", value=0.005, format="%.5f")
+with col1:
+    st.header("Upload and Fit Data")
+    initial_k1 = st.number_input("Initial guess for k₁ (~0.01)", value=0.01, format="%.5f")
+    initial_k2 = st.number_input("Initial guess for k₂ (~½ of k₁)", value=0.005, format="%.5f")
     max_deut = st.slider("Max Deuterium Incorporation", 0.0, 1.0, 0.95, 0.01)
 
-    st.subheader("Download Example File")
-    example_data = pd.DataFrame({
-        'time': np.linspace(0, 200, 10),
-        'd0': np.linspace(1, 0.1, 10),
-        'd1': np.linspace(0, 0.5, 10),
-        'd2': np.linspace(0, 0.4, 10)
-    })
-    csv = example_data.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="example_kinetics.csv">Download CSV</a>'
-    st.markdown(href, unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload your kinetic data (Excel)", type=["xlsx"])
 
-uploaded_file = st.file_uploader("Upload your kinetic data (Excel)", type=["xlsx"])
+    if uploaded_file:
+        df = pd.read_excel(uploaded_file)
+        using_example = False
+    else:
+        df = pd.DataFrame({
+            'time': np.linspace(0, 200, 10),
+            'd0': np.linspace(1, 0.1, 10),
+            'd1': np.linspace(0, 0.5, 10),
+            'd2': np.linspace(0, 0.4, 10)
+        })
+        using_example = True
+        st.info("No file uploaded. Example dataset loaded.")
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
     if all(col in df.columns for col in ['time', 'd0', 'd1', 'd2']):
         time = df['time'].values
         d0 = df['d0'].values
         d1 = df['d1'].values
         d2 = df['d2'].values
 
-        min_d1 = 1.0 - max_deut  # Enforce conservation: D1 cannot drop below remainder when D2 is at maximum
+        min_d1 = 1.0 - max_deut
 
         result = fit_kinetic_data(time, d0, d1, d2,
                                    initial_k1=initial_k1,
                                    initial_k2=initial_k2,
                                    max_deut=max_deut,
                                    min_d1=min_d1)
-
         if result['success']:
             st.success("Model fit successfully!")
             st.metric("k₁", f"{result['k1']:.5f} ± {result['k1_error']:.5f}")
             st.metric("k₂", f"{result['k2']:.5f} ± {result['k2_error']:.5f}")
             st.metric("R²", f"{result['r_squared']:.5f}")
-
-            st.subheader("Observed vs Fitted Values")
-            d0_fit = 1.0 - result['d1_fit'] - result['d2_fit']
-            fitted_df = pd.DataFrame({
-                'time': time,
-                'D0 Observed': d0,
-                'D1 Observed': d1,
-                'D2 Observed': d2,
-                'D0 Fit': d0_fit,
-                'D1 Fit': result['d1_fit'],
-                'D2 Fit': result['d2_fit']
-            })
-            st.dataframe(fitted_df, use_container_width=True)
-
-            st.line_chart(fitted_df.set_index('time'))
         else:
             st.error(result['message'])
     else:
-        st.error("Your file must include columns: time, d0, d1, and d2")
+        st.error("File must contain: time, d0, d1, d2")
+
+with col2:
+    if 'result' in locals() and result['success']:
+        st.subheader("Observed vs Fitted Curves")
+        d0_fit = 1.0 - result['d1_fit'] - result['d2_fit']
+        fitted_df = pd.DataFrame({
+            'time': time,
+            'D0 Observed': d0,
+            'D1 Observed': d1,
+            'D2 Observed': d2,
+            'D0 Fit': d0_fit,
+            'D1 Fit': result['d1_fit'],
+            'D2 Fit': result['d2_fit']
+        })
+        st.line_chart(fitted_df.set_index('time'))
