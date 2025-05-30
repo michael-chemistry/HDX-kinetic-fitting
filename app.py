@@ -58,7 +58,7 @@ $$
 - Allows bound constraints  
 - Robust to parameter correlation
 """)
-    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_container_width=True) with images and equations
+    st.image("sequential_structure.png", caption="4-methyl-2-oxopentanoic-3,3-d₂ acid", use_container_width=True)
 col1, col2 = st.columns(2)
 
 with col1:
